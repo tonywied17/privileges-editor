@@ -88,15 +88,8 @@ app.post('/download-ftp', async (req, res) =>
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
     
-    // Use downloadStream for better performance with privileges.xml
-    const { PassThrough } = require('stream');
-    const stream = new PassThrough();
-    const chunks = [];
-
-    stream.on('data', (chunk) => chunks.push(chunk));
-
-    await client.downloadStream(target, stream);
-    const buffer = Buffer.concat(chunks);
+    // Direct download is faster for small files like privileges.xml
+    const buffer = await client.download(target);
     const xml = buffer.toString('utf8');
 
     res.json({ ok: true, xml, message: 'File downloaded successfully' });

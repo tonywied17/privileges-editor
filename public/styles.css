@@ -280,7 +280,11 @@ body {
 	display: flex;
 	justify-self: end;
 }
+#ftpModalConnect {
+	width: 100%;
+}
 
+#ftpModalTest,
 #ftpModalConnect,
 #ftpUploadBtn,
 #exportBtn,
@@ -295,6 +299,7 @@ body {
 	border-radius: 10px;
 }
 
+#ftpModalTest,
 #ftpModalConnect,
 #ftpUploadBtn,
 #exportBtn {
@@ -317,6 +322,7 @@ body {
 	box-shadow: 0 8px 20px rgba(13, 184, 192, 0.12);
 }
 
+#ftpModalTest:hover,
 #ftpModalConnect:hover,
 #ftpUploadBtn:hover,
 #exportBtn:hover,
@@ -325,6 +331,7 @@ body {
 	background: rgba(77, 208, 225, 0.170);
 }
 
+#ftpModalTest:active,
 #ftpModalConnect:active,
 #ftpUploadBtn:active,
 #exportBtn:active,
@@ -371,6 +378,10 @@ body {
 	border: 1px solid rgba(255, 255, 255, 0.03);
 	background: transparent;
 	color: var(--muted);
+}
+
+.btn {
+	border-radius: 10px;
 }
 
 .btn-group .btn.active,

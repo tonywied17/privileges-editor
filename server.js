@@ -3,7 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const { parseStringPromise } = require('xml2js');
-const FTPClient = require('molex-ftp-client');
+const FTPClient = require('molex-ftp');
 const path = require('path');
 require('dotenv').config();
 
@@ -123,44 +123,6 @@ app.post('/check-ftp', async (req, res) =>
   } catch (err)
   {
     res.status(500).json({ error: err.message || String(err) });
-  } finally
-  {
-    try { await client.close(); } catch (e) { /* ignore close errors */ }
-  }
-});
-
-//! Test FTP connection and return connection state information
-//! \param req.body - { host, port, username, password }
-//! Returns JSON: { connected: boolean, state: object, message: string }
-app.post('/test-ftp-connection', async (req, res) =>
-{
-  const { host, port, username, password } = req.body;
-  if (!host || !username || !password) return res.status(400).json({ error: 'missing parameters' });
-
-  const client = new FTPClient({
-    debug: true,
-    logger: (msg, ...args) => console.log(`[FTP Test ${host}]`, msg, ...args)
-  });
-
-  try
-  {
-    await client.connect({ host, port: port || 21, user: username, password });
-    const state = client.getState();
-    
-    res.json({ 
-      connected: true, 
-      state, 
-      message: `Successfully connected to ${host}:${port || 21} as ${username}` 
-    });
-  } catch (err)
-  {
-    const state = client.getState();
-    res.status(500).json({ 
-      connected: false, 
-      state, 
-      error: err.message || String(err),
-      message: `Failed to connect to ${host}:${port || 21}`
-    });
   } finally
   {
     try { await client.close(); } catch (e) { /* ignore close errors */ }

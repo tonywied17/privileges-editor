@@ -9,7 +9,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
-    "molex-ftp-client": "^1.0.1",
+    "molex-ftp-client": "^1.2.0",
     "node-fetch": "^2.6.12",
     "xml2js": "^0.4.23"
   }

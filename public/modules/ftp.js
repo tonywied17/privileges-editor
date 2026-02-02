@@ -1,5 +1,5 @@
 import { showToast } from './helpers.js';
-import { doFtpUpload } from './api.js';
+import { doFtpUpload, testFtpConnection } from './api.js';
 import { renderGroups } from './render.js';
 
 //! Bind FTP modal and upload/download controls
@@ -20,6 +20,48 @@ export function bind(app)
     {
         document.getElementById('ftpCloseBtn')?.addEventListener('click', () => ftpModal.style.display = 'none');
         document.getElementById('ftpModalCancel')?.addEventListener('click', () => ftpModal.style.display = 'none');
+        
+        // Test Connection button handler
+        document.getElementById('ftpModalTest')?.addEventListener('click', async () =>
+        {
+            const status = document.getElementById('ftpModalStatus');
+            const host = document.getElementById('ftpModalHost').value.trim();
+            const portStr = document.getElementById('ftpModalPort').value.trim();
+            const port = portStr ? (parseInt(portStr, 10) || undefined) : undefined;
+            const user = document.getElementById('ftpModalUser').value.trim();
+            const pass = document.getElementById('ftpModalPass').value;
+            
+            if (!host || !user) { 
+                if (status) status.innerText = 'Host and username required'; 
+                return; 
+            }
+            
+            try {
+                if (status) status.innerText = 'Testing connection...';
+                document.getElementById('ftpModalTest').disabled = true;
+                
+                const result = await testFtpConnection({ host, port, user, pass });
+                
+                if (result.ok && result.json.connected) {
+                    const state = result.json.state;
+                    if (status) status.innerHTML = `
+                        <span style="color: #28a745;">✅ Connection successful!</span><br>
+                        <small>${state.user}@${state.host}:${state.port}</small>
+                    `;
+                    showToast('FTP connection test successful!', null, { type: 'success' });
+                } else {
+                    const errorMsg = result.json.error || 'Connection failed';
+                    if (status) status.innerHTML = `<span style="color: #dc3545;">❌ ${errorMsg}</span>`;
+                    showToast(`FTP test failed: ${errorMsg}`, null, { type: 'error' });
+                }
+            } catch (e) {
+                if (status) status.innerHTML = `<span style="color: #dc3545;">❌ Test error: ${e.message}</span>`;
+                showToast(`FTP test error: ${e.message}`, null, { type: 'error' });
+            } finally {
+                document.getElementById('ftpModalTest').disabled = false;
+            }
+        });
+        
         document.getElementById('ftpModalConnect')?.addEventListener('click', async () =>
         {
             const remoteInput = document.getElementById('ftpModalRemotePath'); if (remoteInput) remoteInput.readOnly = true;

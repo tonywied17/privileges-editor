@@ -47,3 +47,12 @@ export async function doFtpUpload({ host, port, user, pass, xml })
     const j = await r.json().catch(() => ({}));
     return { ok: r.ok, json: j };
 }
+
+//! Test FTP connection and get connection state
+//! \param { host, port, user, pass } - connection info
+export async function testFtpConnection({ host, port, user, pass })
+{
+    const r = await fetch('/test-ftp-connection', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ host, port, username: user, password: pass }) });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok, json: j };
+}

@@ -87,8 +87,7 @@ app.post('/download-ftp', async (req, res) =>
   {
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
-    
-    // Direct download is faster for small files like privileges.xml
+  
     const buffer = await client.download(target);
     const xml = buffer.toString('utf8');
 
@@ -124,6 +123,44 @@ app.post('/check-ftp', async (req, res) =>
   } catch (err)
   {
     res.status(500).json({ error: err.message || String(err) });
+  } finally
+  {
+    try { await client.close(); } catch (e) { /* ignore close errors */ }
+  }
+});
+
+//! Test FTP connection and return connection state information
+//! \param req.body - { host, port, username, password }
+//! Returns JSON: { connected: boolean, state: object, message: string }
+app.post('/test-ftp-connection', async (req, res) =>
+{
+  const { host, port, username, password } = req.body;
+  if (!host || !username || !password) return res.status(400).json({ error: 'missing parameters' });
+
+  const client = new FTPClient({
+    debug: true,
+    logger: (msg, ...args) => console.log(`[FTP Test ${host}]`, msg, ...args)
+  });
+
+  try
+  {
+    await client.connect({ host, port: port || 21, user: username, password });
+    const state = client.getState();
+    
+    res.json({ 
+      connected: true, 
+      state, 
+      message: `Successfully connected to ${host}:${port || 21} as ${username}` 
+    });
+  } catch (err)
+  {
+    const state = client.getState();
+    res.status(500).json({ 
+      connected: false, 
+      state, 
+      error: err.message || String(err),
+      message: `Failed to connect to ${host}:${port || 21}`
+    });
   } finally
   {
     try { await client.close(); } catch (e) { /* ignore close errors */ }

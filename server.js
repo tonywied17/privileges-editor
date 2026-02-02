@@ -59,24 +59,7 @@ app.post('/upload-ftp', async (req, res) =>
   {
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
-    
-    // Ensure directory exists by trying to cd to it
-    const dir = path.dirname(target);
-    if (dir !== '.' && dir !== '/') {
-      try {
-        await client.cd(dir);
-      } catch (e) {
-        // Directory might not exist, try to create it
-        try {
-          await client.mkdir(dir);
-          await client.cd(dir);
-        } catch (mkdirErr) {
-          // Ignore if mkdir fails (might already exist)
-        }
-      }
-    }
-    
-    await client.upload(xml, target);
+    await client.uploadFile(xml, target, true);
     res.json({ ok: true, uploadedTo: target, message: 'File uploaded successfully' });
   } catch (err)
   {

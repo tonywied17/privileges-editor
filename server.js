@@ -49,24 +49,24 @@ app.post('/upload-ftp', async (req, res) =>
 {
   const { host, port, username, password, xml, remotePath } = req.body;
   if (!host || !username || !password || !xml) return res.status(400).json({ error: 'missing parameters' });
-  
-  const client = new FTPClient({ 
+
+  const client = new FTPClient({
     debug: true,
     logger: (msg, ...args) => console.log(`[FTP Upload ${host}]`, msg, ...args)
   });
-  
+
   try
   {
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
-    await client.uploadFile(xml, target, true);
+    await client.upload(xml, target, true);
     res.json({ ok: true, uploadedTo: target, message: 'File uploaded successfully' });
   } catch (err)
   {
     res.status(500).json({ error: err.message || String(err) });
   } finally
   {
-    await client.close();
+    try { await client.close(); } catch (e) { /* ignore close errors */ }
   }
 });
 
@@ -77,25 +77,35 @@ app.post('/download-ftp', async (req, res) =>
 {
   const { host, port, username, password, remotePath } = req.body;
   if (!host || !username || !password) return res.status(400).json({ error: 'missing parameters' });
-  
-  const client = new FTPClient({ 
+
+  const client = new FTPClient({
     debug: true,
     logger: (msg, ...args) => console.log(`[FTP Download ${host}]`, msg, ...args)
   });
-  
+
   try
   {
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
-    const buffer = await client.download(target);
+    
+    // Use downloadStream for better performance with privileges.xml
+    const { PassThrough } = require('stream');
+    const stream = new PassThrough();
+    const chunks = [];
+
+    stream.on('data', (chunk) => chunks.push(chunk));
+
+    await client.downloadStream(target, stream);
+    const buffer = Buffer.concat(chunks);
     const xml = buffer.toString('utf8');
+
     res.json({ ok: true, xml, message: 'File downloaded successfully' });
   } catch (err)
   {
     res.status(500).json({ error: err.message || String(err) });
   } finally
   {
-    await client.close();
+    try { await client.close(); } catch (e) { /* ignore close errors */ }
   }
 });
 
@@ -106,41 +116,24 @@ app.post('/check-ftp', async (req, res) =>
 {
   const { host, port, username, password, remotePath } = req.body;
   if (!host || !username || !password) return res.status(400).json({ error: 'missing parameters' });
-  
-  const client = new FTPClient({ 
+
+  const client = new FTPClient({
     debug: true,
     logger: (msg, ...args) => console.log(`[FTP Check ${host}]`, msg, ...args)
   });
-  
+
   try
   {
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
-    try
-    {
-      // try to get size; if succeeds, file exists
-      const size = await client.size(target);
-      res.json({ exists: true, size, message: 'File exists on server' });
-    } catch (err)
-    {
-      try
-      {
-        const dir = path.dirname(target);
-        const listing = await client.list(dir);
-        const base = path.basename(target);
-        const found = listing.split('\n').some(line => line.includes(base));
-        res.json({ exists: !!found, message: found ? 'File exists on server' : 'File not found on server' });
-      } catch (e)
-      {
-        res.json({ exists: false, message: 'File not found on server' });
-      }
-    }
+    const info = await client.stat(target);
+    res.json({ exists: info.exists, size: info.size, message: info.exists ? 'File exists on server' : 'File not found on server' });
   } catch (err)
   {
     res.status(500).json({ error: err.message || String(err) });
   } finally
   {
-    await client.close();
+    try { await client.close(); } catch (e) { /* ignore close errors */ }
   }
 });
 

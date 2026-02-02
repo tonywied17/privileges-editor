@@ -1,0 +1,16 @@
+{
+  "name": "priv-editor",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "molex-ftp-client": "^1.0.1",
+    "node-fetch": "^2.6.12",
+    "xml2js": "^0.4.23"
+  }
+}

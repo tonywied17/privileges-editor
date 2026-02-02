@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Privileges Editor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/styles.css" rel="stylesheet">
+  <script type="module" src="/modules/boot.js" defer></script>
+</head>
+
+<body class="dark">
+  <div class="container py-4">
+    <h3 class="mb-3">Privileges.xml editor</h3>
+    <div id="stepper" class="mb-3">
+      <div class="btn-group" role="group">
+        <button id="step1btn" class="btn btn-outline-primary active">1. Load</button>
+        <button id="step2btn" class="btn btn-outline-primary" disabled>2. Edit</button>
+        <button id="step3btn" class="btn btn-outline-primary" disabled>3. Export/Upload</button>
+      </div>
+    </div>
+
+    <div id="step1" class="card p-3 mb-3">
+
+      <div class="row">
+        <div class="col-md-8">
+          <div class="mb-1">
+            <textarea id="pasteXml" class="form-control" rows="8"
+              placeholder="Paste contents or drag & drop privileges.xml here"></textarea>
+          </div>
+          <div class="mb-4">
+            <div id="fileDrop">
+              <div
+                style="display:flex;gap:12px;align-items:center;justify-content: flex-start;width:100%;flex-direction: row-reverse;">
+                <div id="dropMessage">or upload a file...</div>
+                <a href="#" id="newBtn" class="btn btn-secondary btn-sm">new blank privileges.xml</a>
+              </div>
+              <input id="fileInput" type="file" accept=".xml" class="d-none" />
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="group-card card p-3">
+            <h6 style="margin-top:0">FTP / GPortal</h6>
+            <p class="form-label" style="margin-bottom:8px;color:var(--muted)">Connect to download the server's
+              privileges.xml.</p>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <button id="loadFtpBtn" class="btn btn-outline-secondary w-100">Connect &amp; Load</button>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-center mt-3">
+          </div>
+
+        </div>
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="d-grid gap-2">
+
+          <button id="loadBtn" class="btn btn-outline-primary w-100">Edit XML ></button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="step2" class="card p-3 mb-3 d-none">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5>Edit Steam IDs</h5>
+        <div>
+          <button id="addGroupBtn" class="btn btn-primary btn-sm">+ Add Group</button>
+          <!-- <button id="exportBtn" class="btn btn-success btn-sm ms-2">Export ></button> -->
+        </div>
+      </div>
+      <div id="groups" class="mt-3"></div>
+      <div class="mt-3">
+        <button id="exportInEditBtn" class="btn btn-success w-100">Export ></button>
+      </div>
+    </div>
+
+    <div id="step3" class="card p-3 mb-3 d-none">
+      <h5>Export XML</h5>
+      <div class="mb-2">
+        <textarea id="exportXml" class="form-control" rows="12"></textarea>
+      </div>
+      <div>
+        <button id="downloadBtn" class="btn btn-success">Download XML</button>
+        <button id="copyBtn" class="btn btn-outline-secondary">Copy</button>
+      </div>
+      <hr />
+      <h6>FTP upload to GPortal</h6>
+      <div class="row g-2">
+        <div class="col-md-3"><input id="ftpHost" class="form-control form-control-sm" placeholder="FTP Host/IP" />
+        </div>
+        <div class="col-md-2"><input id="ftpPort" class="form-control form-control-sm" placeholder="Port" /></div>
+        <div class="col-md-4"><input id="ftpUser" class="form-control form-control-sm" placeholder="Username" /></div>
+        <div class="col-md-2"><input id="ftpPass" type="password" class="form-control form-control-sm"
+            placeholder="Password" /></div>
+        <div class="col-md-1"><button id="ftpUploadBtn" class="btn btn-outlined-primary">Upload</button></div>
+      </div>
+      <div id="ftpResult" class="mt-2"></div>
+    </div>
+
+    <div id="toastContainer" style="position:fixed;right:20px;bottom:20px;z-index:1200"></div>
+    <div id="ftpConnectModal" class="simple-modal" style="display:none;">
+      <div class="simple-modal-backdrop"></div>
+      <div class="simple-modal-card">
+        <button id="ftpCloseBtn" class="modal-close-btn" aria-label="Close">×</button>
+        <h5 style="margin-bottom:12px">Connect to FTP</h5>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="ftpModalHost" class="form-control form-control-sm" placeholder="Host (IP or hostname)" />
+          <div style="display:flex;gap:8px"><input id="ftpModalPort" class="form-control form-control-sm"
+              placeholder="Port" style="width:120px" /><input id="ftpModalRemotePath"
+              class="form-control form-control-sm" placeholder="Remote path (/Assets/privileges.xml)" READONLY /></div>
+          <input id="ftpModalUser" class="form-control form-control-sm" placeholder="Username" />
+          <input id="ftpModalPass" type="password" class="form-control form-control-sm" placeholder="Password" />
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+            <button id="ftpModalCancel" class="btn btn-outline-secondary">Cancel</button>
+            <button id="ftpModalConnect" class="btn btn-outline-primary">Connect & Load</button>
+          </div>
+          <div id="ftpModalStatus" style="color:var(--muted);font-size:13px;margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</body>
+
+</html>

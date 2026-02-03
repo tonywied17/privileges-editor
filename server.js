@@ -5,9 +5,7 @@ const fetch = require('node-fetch');
 const { parseStringPromise } = require('xml2js');
 const FTPClient = require('molex-ftp');
 const path = require('path');
-const { load } = require('molex-env');
-
-load({ export: true });
+require('molex-env').load();
 
 const app = express();
 app.use(cors());
@@ -137,7 +135,7 @@ app.post('/check-ftp', async (req, res) =>
 app.get('/resolve-steam', async (req, res) =>
 {
   const profileUrl = req.query.profileUrl;
-  const steamApiKey = process.env.STEAM_API_KEY;
+  const steamApiKey = process.menv.STEAM_API_KEY;
   if (!profileUrl) return res.status(400).json({ error: 'profileUrl query param required' });
 
   try
@@ -181,6 +179,6 @@ app.get('/resolve-steam', async (req, res) =>
   }
 });
 
-const PORT = process.env.PORT || 7272;
+const PORT = process.menv.PORT || 7272;
 //! Start HTTP server on configured port
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

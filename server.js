@@ -5,7 +5,9 @@ const fetch = require('node-fetch');
 const { parseStringPromise } = require('xml2js');
 const FTPClient = require('molex-ftp');
 const path = require('path');
-require('dotenv').config();
+const { load } = require('molex-env');
+
+load({ export: true });
 
 const app = express();
 app.use(cors());
@@ -87,7 +89,7 @@ app.post('/download-ftp', async (req, res) =>
   {
     await client.connect({ host, port: port || 21, user: username, password });
     const target = remotePath || '/Assets/privileges.xml';
-  
+
     const buffer = await client.download(target);
     const xml = buffer.toString('utf8');
 

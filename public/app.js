@@ -1,10 +1,10 @@
 /*
  * File: c:\Users\tonyw\Desktop\PRIVS\public\app.js
- * Project: c:\Users\tonyw\Desktop\PRIVS
+ * Project: c:\Users\tonyw\Desktop\PRIVS\privileges-editor
  * Created Date: Saturday January 31st 2026
  * Author: Tony Wiedman
  * -----
- * Last Modified: Sat January 31st 2026 9:06:29 
+ * Last Modified: Thu February 5th 2026 5:20:06 
  * Modified By: Tony Wiedman
  * -----
  * Copyright (c) 2026 MolexWorks
@@ -15,6 +15,7 @@ import { parsePrivilegesXml as parserParse } from './modules/parser.js';
 import { buildXml as xmlBuild } from './modules/xmlbuilder.js';
 import { renderGroups } from './modules/render.js';
 import { showToast, showProfileModal } from './modules/helpers.js';
+import { updateFtpDisplay } from './modules/ftp.js';
 
 //! Toggle visible step panels and step button states
 //! \param n - step number (1..3)
@@ -22,7 +23,7 @@ export default class PrivilegesEditor
 {
   constructor()
   {
-    this.state = { groups: [], debounce: {} };
+    this.state = { groups: [], debounce: {}, ftpCredentials: null };
     this.observer = new MutationObserver(() => { });
   }
 
@@ -37,6 +38,12 @@ export default class PrivilegesEditor
     const step3btn = document.getElementById('step3btn');
     if (step2btn) step2btn.disabled = n < 2;
     if (step3btn) step3btn.disabled = n < 2;
+
+    // update ftp display when navigating to export page
+    if (n === 3)
+    {
+      updateFtpDisplay(this);
+    }
   }
 
   //! Escape string for HTML insertion
@@ -94,8 +101,8 @@ export default class PrivilegesEditor
     if (!/^\d{17}$/.test(v))
     {
       if (this.state.debounce[key]) { clearTimeout(this.state.debounce[key]); delete this.state.debounce[key]; }
-      // Only render if we're clearing validation state that was previously set
-      if (entry.loading || entry.valid !== null || entry.avatar !== null) {
+      if (entry.loading || entry.valid !== null || entry.avatar !== null)
+      {
         entry.loading = false; entry.valid = null; entry.avatar = null; renderGroups(this);
       }
       return;

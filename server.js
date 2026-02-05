@@ -3,8 +3,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const { parseStringPromise } = require('xml2js');
-const FTPClient = require('molex-ftp');
 const path = require('path');
+const FTPClient = require('molex-ftp');
 require('molex-env').load();
 
 const app = express();
@@ -55,9 +55,14 @@ app.post('/upload-ftp', async (req, res) =>
     logger: (msg, ...args) => console.log(`[FTP Upload ${host}]`, msg, ...args)
   });
 
+  client.on('error', (err) =>
+  {
+    console.error(`[FTP Upload ${host}] Client error:`, err.message);
+  });
+
   try
   {
-    await client.connect({ host, port: port || 21, user: username, password });
+    await client.connect({ host, port: port || 21, user: username, password, timeout: 10000 });
     const target = remotePath || '/Assets/privileges.xml';
     await client.upload(xml, target, true);
     res.json({ ok: true, uploadedTo: target, message: 'File uploaded successfully' });
@@ -83,9 +88,14 @@ app.post('/download-ftp', async (req, res) =>
     logger: (msg, ...args) => console.log(`[FTP Download ${host}]`, msg, ...args)
   });
 
+  client.on('error', (err) =>
+  {
+    console.error(`[FTP Download ${host}] Client error:`, err.message);
+  });
+
   try
   {
-    await client.connect({ host, port: port || 21, user: username, password });
+    await client.connect({ host, port: port || 21, user: username, password, timeout: 10000 });
     const target = remotePath || '/Assets/privileges.xml';
 
     const buffer = await client.download(target);
@@ -114,9 +124,15 @@ app.post('/check-ftp', async (req, res) =>
     logger: (msg, ...args) => console.log(`[FTP Check ${host}]`, msg, ...args)
   });
 
+  // Handle unhandled errors to prevent server restarts
+  client.on('error', (err) =>
+  {
+    console.error(`[FTP Check ${host}] Client error:`, err.message);
+  });
+
   try
   {
-    await client.connect({ host, port: port || 21, user: username, password });
+    await client.connect({ host, port: port || 21, user: username, password, timeout: 10000 });
     const target = remotePath || '/Assets/privileges.xml';
     const info = await client.stat(target);
     res.json({ exists: info.exists, size: info.size, message: info.exists ? 'File exists on server' : 'File not found on server' });

@@ -91,15 +91,23 @@
       </div>
       <hr />
       <h6>FTP upload to GPortal</h6>
-      <div class="row g-2">
-        <div class="col-md-3"><input id="ftpHost" class="form-control form-control-sm" placeholder="FTP Host/IP" />
-        </div>
-        <div class="col-md-2"><input id="ftpPort" class="form-control form-control-sm" placeholder="Port" /></div>
-        <div class="col-md-4"><input id="ftpUser" class="form-control form-control-sm" placeholder="Username" /></div>
-        <div class="col-md-2"><input id="ftpPass" type="password" class="form-control form-control-sm"
-            placeholder="Password" /></div>
-        <div class="col-md-1"><button id="ftpUploadBtn" class="btn btn-outlined-primary">Upload</button></div>
+      
+      <!-- Show when no FTP credentials are set -->
+      <div id="ftpNotConnected" class="d-none">
+        <button id="connectGportalBtn" class="btn btn-outline-primary">Connect gPortal</button>
       </div>
+      
+      <!-- Show when FTP credentials are already set -->
+      <div id="ftpConnected" class="d-none">
+        <div class="ftp-connection-display">
+          <div class="ftp-connection-label" id="ftpConnectionLabel">user@host.com:port</div>
+          <div class="ftp-connection-actions">
+            <button id="ftpChangeBtn" class="btn btn-outline-secondary btn-sm">Change</button>
+            <button id="ftpUploadBtn" class="btn btn-primary btn-sm">Upload</button>
+          </div>
+        </div>
+      </div>
+      
       <div id="ftpResult" class="mt-2"></div>
     </div>
 

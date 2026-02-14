@@ -140,7 +140,7 @@ export function renderCfg(app)
             const card = document.createElement('div'); card.className = 'group-card mb-2 p-2';
             const head = document.createElement('div'); head.className = 'd-flex justify-content-between align-items-center mb-2';
             const title = document.createElement('strong'); title.textContent = it.name;
-            const remGroup = document.createElement('button'); remGroup.className = 'btn btn-sm btn-outline-danger'; remGroup.textContent = 'Remove Group'; remGroup.addEventListener('click', () => { app.removeCfgGroup(idx); });
+            const remGroup = document.createElement('button'); remGroup.className = 'btn btn-sm btn-outline-danger'; remGroup.textContent = 'Remove Preset'; remGroup.addEventListener('click', () => { app.removeCfgGroup(idx); });
             head.appendChild(title); head.appendChild(remGroup); card.appendChild(head);
             (it.entries || []).forEach((e, ei) =>
             {

@@ -42,13 +42,13 @@ try {
 
         if (fileType === 'cfg') {
             if (addGroupBtn) addGroupBtn.style.display = 'none';
-            if (step2Header) step2Header.textContent = '';
+            if (step2Header) { step2Header.style.display = 'none'; step2Header.textContent = ''; }
             if (app.state.cfgEntries) {
                 import('./render.js').then(m => { if (m && m.renderCfg) m.renderCfg(app); }).catch(() => { });
             }
         } else {
             if (addGroupBtn) addGroupBtn.style.display = '';
-            if (step2Header) step2Header.textContent = 'Edit Steam IDs';
+            if (step2Header) { step2Header.style.display = ''; step2Header.textContent = 'Edit Steam IDs'; }
             if (app.state.groups) renderGroups(app);
         }
 

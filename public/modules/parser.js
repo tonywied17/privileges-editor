@@ -66,7 +66,7 @@ export function parseCfg(text)
             i++; continue;
         }
 
-        const grpMatch = trimmed.match(/^\/\/\s*(.+?)\s*$/);
+        const grpMatch = trimmed.match(/^(?:\/\/|#)\s*(.+?)\s*$/);
         if (grpMatch)
         {
             const name = grpMatch[1];
@@ -75,7 +75,7 @@ export function parseCfg(text)
             while (i < lines.length)
             {
                 const l = lines[i].trim();
-                if (/^\/\/\s*END(?:\b|\s+)/i.test(l) || /^\/\/\s*END\b/i.test(l)) { i++; break; }
+                if (/^(?:\/\/|#)\s*END\b/i.test(l)) { i++; break; }
                 if (!l) { i++; continue; }
                 if (l.startsWith('//') || l.startsWith('#')) { i++; continue; }
                 const idx = l.indexOf('=');
@@ -113,9 +113,9 @@ export function buildCfg(items)
     {
         if (it.type === 'group')
         {
-            lines.push(`// ${it.name}`);
+            lines.push(`# ${it.name}`);
             for (const e of (it.entries || [])) lines.push(`${e.key}=${e.value}`);
-            lines.push(`// END ${it.name}`);
+            lines.push(`# END ${it.name}`);
         }
         else if (it.type === 'entry')
         {

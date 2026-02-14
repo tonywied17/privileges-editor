@@ -1,7 +1,7 @@
 import { showProfileModal } from './helpers.js';
 
-//! Render all groups and their member lines into the DOM
-//! \param app - PrivilegesEditor instance (provides `state` and update methods)
+//! renderGroups - render group cards into the DOM
+//! \param app - PrivilegesEditor instance
 export function renderGroups(app)
 {
     const H = { showProfileModal };
@@ -85,7 +85,8 @@ export function renderGroups(app)
 
     if (focused)
     {
-        requestAnimationFrame(() => {
+        requestAnimationFrame(() =>
+        {
             try
             {
                 const selector = `input.${focused.cls.split(' ').join('.')}[data-g="${focused.g}"][data-i="${focused.i}"]`;
@@ -98,4 +99,76 @@ export function renderGroups(app)
             } catch (e) { }
         });
     }
+}
+
+//! renderCfg - render config editor UI
+//! \param app - PrivilegesEditor instance
+export function renderCfg(app)
+{
+    const container = document.getElementById('groups');
+    if (!container) return;
+    container.innerHTML = '';
+    const entries = app.state.cfgEntries || [];
+
+    const header = document.createElement('div'); header.className = 'd-flex justify-content-between align-items-center mb-2';
+    const h = document.createElement('h5'); h.textContent = 'Edit Config (key = value)'; header.appendChild(h);
+
+    const presetWrap = document.createElement('div'); presetWrap.style.display = 'flex'; presetWrap.style.gap = '8px';
+    const presetSelect = document.createElement('select'); presetSelect.className = 'form-select form-select-sm bg-dark text-white border-0';
+    presetSelect.style.width = '220px';
+    const presets = (app.state && Array.isArray(app.state.cfgPresets)) ? app.state.cfgPresets : [];
+    const opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = presets.length ? 'Add Preset...' : 'No presets'; presetSelect.appendChild(opt0);
+    presets.forEach(p => { const o = document.createElement('option'); o.value = p.name; o.textContent = p.name; presetSelect.appendChild(o); });
+
+    presetSelect.addEventListener('change', () =>
+    {
+        const sel = presetSelect.value; if (!sel) return; const p = presets.find(x => x.name === sel); if (!p) return;
+        app.addCfgGroup(p);
+        presetSelect.value = '';
+    });
+    const addBtn = document.createElement('button'); addBtn.className = 'btn btn-primary btn-sm'; addBtn.textContent = '+ Add'; addBtn.addEventListener('click', () => { app.addCfgLine(); });
+    presetWrap.appendChild(presetSelect); presetWrap.appendChild(addBtn);
+    header.appendChild(presetWrap);
+    container.appendChild(header);
+
+    const list = document.createElement('div');
+
+    entries.forEach((it, idx) =>
+    {
+        if (it.type === 'group')
+        {
+            const card = document.createElement('div'); card.className = 'group-card mb-2 p-2';
+            const head = document.createElement('div'); head.className = 'd-flex justify-content-between align-items-center mb-2';
+            const title = document.createElement('strong'); title.textContent = it.name;
+            const remGroup = document.createElement('button'); remGroup.className = 'btn btn-sm btn-outline-danger'; remGroup.textContent = 'Remove Group'; remGroup.addEventListener('click', () => { app.removeCfgGroup(idx); });
+            head.appendChild(title); head.appendChild(remGroup); card.appendChild(head);
+            (it.entries || []).forEach((e, ei) =>
+            {
+                const row = document.createElement('div'); row.className = 'cfg-line d-flex gap-2 mb-2';
+                const keyInput = document.createElement('input'); keyInput.className = 'form-control form-control-sm'; keyInput.placeholder = 'key'; keyInput.value = e.key || '';
+                if (e.duplicate) keyInput.classList.add('is-invalid');
+                keyInput.addEventListener('input', (ev) => app.updateCfgKey(idx, ei, ev.target.value));
+                const valInput = document.createElement('input'); valInput.className = 'form-control form-control-sm'; valInput.placeholder = 'value'; valInput.value = e.value || '';
+                valInput.addEventListener('input', (ev) => app.updateCfgValue(idx, ei, ev.target.value));
+                const rem = document.createElement('button'); rem.className = 'btn btn-sm btn-outline-danger'; rem.textContent = '✕'; rem.addEventListener('click', () => app.removeCfgLine(idx, ei));
+                row.appendChild(keyInput); row.appendChild(valInput); row.appendChild(rem);
+                card.appendChild(row);
+            });
+            list.appendChild(card);
+        }
+        else
+        {
+            const e = it;
+            const row = document.createElement('div'); row.className = 'cfg-line d-flex gap-2 mb-2';
+            const keyInput = document.createElement('input'); keyInput.className = 'form-control form-control-sm'; keyInput.placeholder = 'key'; keyInput.value = e.key || '';
+            if (e.duplicate) keyInput.classList.add('is-invalid');
+            keyInput.addEventListener('input', (ev) => app.updateCfgKey(null, idx, ev.target.value));
+            const valInput = document.createElement('input'); valInput.className = 'form-control form-control-sm'; valInput.placeholder = 'value'; valInput.value = e.value || '';
+            valInput.addEventListener('input', (ev) => app.updateCfgValue(null, idx, ev.target.value));
+            const rem = document.createElement('button'); rem.className = 'btn btn-sm btn-outline-danger'; rem.textContent = '✕'; rem.addEventListener('click', () => app.removeCfgLine(null, idx));
+            row.appendChild(keyInput); row.appendChild(valInput); row.appendChild(rem);
+            list.appendChild(row);
+        }
+    });
+    container.appendChild(list);
 }

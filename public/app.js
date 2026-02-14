@@ -4,33 +4,47 @@
  * Created Date: Saturday January 31st 2026
  * Author: Tony Wiedman
  * -----
- * Last Modified: Thu February 5th 2026 5:20:06 
+ * Last Modified: Sat February 14th 2026 12:54:24 
  * Modified By: Tony Wiedman
  * -----
  * Copyright (c) 2026 MolexWorks
  */
 
 import { validateBatch, validateSingle as apiValidateSingle, resolveSteamProfile as apiResolveSteamProfile, doFtpUpload as apiDoFtpUpload } from './modules/api.js';
-import { parsePrivilegesXml as parserParse } from './modules/parser.js';
+import { parsePrivilegesXml as parserParse, parseCfg as parserParseCfg, buildCfg as parserBuildCfg } from './modules/parser.js';
 import { buildXml as xmlBuild } from './modules/xmlbuilder.js';
-import { renderGroups } from './modules/render.js';
+import { renderGroups, renderCfg } from './modules/render.js';
 import { showToast, showProfileModal } from './modules/helpers.js';
 import { updateFtpDisplay } from './modules/ftp.js';
 
-//! Toggle visible step panels and step button states
-//! \param n - step number (1..3)
 export default class PrivilegesEditor
 {
+  //! constructor - initialize editor state
+  //! \returns new PrivilegesEditor instance
   constructor()
   {
     this.state = { groups: [], debounce: {}, ftpCredentials: null };
     this.observer = new MutationObserver(() => { });
   }
 
-  //! Set currently visible step in UI
-  //! \param n - step number (1..3)
+  //! hasUnsavedChanges - compare current build against last loaded raw
+  //! \returns boolean
+  hasUnsavedChanges()
+  {
+    try
+    {
+      const fileType = document.getElementById('fileTypeSelect')?.value || 'privileges';
+      const current = fileType === 'cfg' ? this.buildCfg() : this.buildXml();
+      const last = this.state.lastLoadedRaw || '';
+      return String(current || '') !== String(last || '');
+    } catch (e) { return false; }
+  }
+
+  //! setStep - update UI step visibility and perform step-specific actions
+  //! \param n - step number
   setStep(n)
   {
+    try { if (typeof this.updateValidationBadge === 'function') this.updateValidationBadge(); } catch (e) { }
     const steps = [1, 2, 3];
     steps.forEach(s => document.getElementById('step' + s)?.classList.toggle('d-none', n !== s));
     steps.forEach(s => document.getElementById('step' + s + 'btn')?.classList.toggle('active', n === s));
@@ -39,32 +53,65 @@ export default class PrivilegesEditor
     if (step2btn) step2btn.disabled = n < 2;
     if (step3btn) step3btn.disabled = n < 2;
 
-    // update ftp display when navigating to export page
+    try
+    {
+      const anyInvalid = (this.state.groups || []).some(g => (g.entries || []).some(e => e.valid === false));
+      this.state.hasValidationErrors = !!anyInvalid;
+      try { const step3btn = document.getElementById('step3btn'); if (step3btn) step3btn.disabled = !!this.state.hasValidationErrors; } catch (e) { }
+    } catch (e) { }
     if (n === 3)
     {
+      try
+      {
+        const fileType = document.getElementById('fileTypeSelect')?.value || (this.state.currentFileType || ((this.state.cfgEntries && this.state.cfgEntries.length) ? 'cfg' : 'privileges'));
+        if (fileType === 'cfg') { if (!this.validateCfg()) return; }
+      } catch (e) { }
       updateFtpDisplay(this);
+      try
+      {
+        const fileType = document.getElementById('fileTypeSelect')?.value || (this.state.currentFileType || ((this.state.cfgEntries && this.state.cfgEntries.length) ? 'cfg' : 'privileges'));
+        const txt = fileType === 'cfg' ? this.buildCfg() : this.buildXml();
+        const exportEl = document.getElementById('exportXml'); if (exportEl) exportEl.value = txt;
+      } catch (e) { }
     }
   }
 
-  //! Escape string for HTML insertion
+  //! updateValidationBadge - show/hide validation badge in stepper
+  updateValidationBadge()
+  {
+    try
+    {
+      const badge = document.getElementById('stepperValidationBadge');
+      if (!badge) return;
+      const hasIssues = !!(this.state && (this.state.cfgHasDuplicates || this.state.hasValidationErrors));
+      badge.style.display = hasIssues ? 'inline-block' : 'none';
+    } catch (e) { }
+  }
+
+  //! escapeHtml - escape text for safe insertion into DOM
   //! \param s - input string
   escapeHtml(s)
   {
     return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   }
 
-  //! Escape attribute value for XML output
-  //! \param s - attribute value
   escapeXmlAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
 
-  //! Parse the privileges XML into internal groups structure
-  //! \param xmlText - XML source string
+  //! parsePrivilegesXml - wrapper to parser.parsePrivilegesXml
+  //! \param xmlText - xml string
   parsePrivilegesXml(xmlText)
   {
     return parserParse(xmlText || '');
   }
 
-  //! Update id typed by user and perform resolution/validation when appropriate
+  //! parseCfg - wrapper to parser.parseCfg
+  //! \param text - cfg text
+  parseCfg(text)
+  {
+    return parserParseCfg(text || '');
+  }
+
+  //! updateId - update entry id and attempt resolution/validation
   //! \param g - group index
   //! \param i - entry index
   //! \param val - new id value
@@ -121,49 +168,112 @@ export default class PrivilegesEditor
     }, 700);
   }
 
-  //! Update player name for an entry
+  //! updateName - update an entry's name
   //! \param g - group index
   //! \param i - entry index
   //! \param val - new name
   updateName(g, i, val) { if (this.state.groups[g]) this.state.groups[g].entries[i].name = val; }
 
-  //! Toggle showColors flag
+  //! updateShow - toggle showColors flag
   //! \param g - group index
   //! \param i - entry index
   //! \param checked - boolean
   updateShow(g, i, checked) { if (this.state.groups[g]) this.state.groups[g].entries[i].showColors = checked ? '1' : '0'; }
 
-  //! Rename a group
+  //! updateGroupName - update group's comment/name
   //! \param g - group index
-  //! \param val - new name
+  //! \param val - new comment
   updateGroupName(g, val) { if (this.state.groups[g]) this.state.groups[g].comment = val; }
 
-  //! Add a blank admin entry to the given group
+  //! addLine - add an empty entry to group
   //! \param gIdx - group index
   addLine(gIdx) { this.state.groups[gIdx].entries.push({ id: '', name: '', showColors: '1', avatar: null, valid: null }); renderGroups(this); }
 
-  //! Remove an entry from a group
+  //! removeLine - remove entry from group
   //! \param g - group index
   //! \param i - entry index
   removeLine(g, i) { this.state.groups[g].entries.splice(i, 1); renderGroups(this); }
 
-  //! Remove an entire group
+  //! removeGroup - remove entire group
   //! \param i - group index
   removeGroup(i) { this.state.groups.splice(i, 1); renderGroups(this); }
 
-  //! Add a new group
-  //! \no params
+  //! addGroup - create new group with default comment
   addGroup() { this.state.groups.push({ comment: 'New group', entries: [] }); renderGroups(this); }
 
-  //! Validate all 17-digit steamids in the state in a single batch
-  //! \no params
+  addCfgLine()
+  {
+    //! addCfgLine - append an entry row to cfg editor
+    this.state.cfgEntries = this.state.cfgEntries || [];
+    this.state.cfgEntries.push({ type: 'entry', key: '', value: '' });
+    try { renderCfg(this); } catch (e) { }
+    try { this.validateCfg(); } catch (e) { }
+  }
+
+  addCfgGroup(preset)
+  {
+    //! addCfgGroup - add group block from preset
+    this.state.cfgEntries = this.state.cfgEntries || [];
+    const block = { type: 'group', name: preset.name || 'Preset', entries: (preset.entries || []).map(e => ({ key: e.key, value: e.value })) };
+    this.state.cfgEntries.push(block);
+    try { renderCfg(this); } catch (e) { }
+    try { this.validateCfg(); } catch (e) { }
+  }
+
+  updateCfgKey(g, i, val)
+  {
+    //! updateCfgKey - update key in cfg entries
+    if (!this.state.cfgEntries) return;
+    if (g === null || typeof g === 'undefined')
+    {
+      const it = this.state.cfgEntries[i]; if (it && it.type === 'entry') it.key = val; try { this.validateCfg(); } catch (e) { } return;
+    }
+    const grp = this.state.cfgEntries[g]; if (!grp || grp.type !== 'group') return; if (grp.entries && grp.entries[i]) grp.entries[i].key = val;
+    try { this.validateCfg(); } catch (e) { }
+  }
+
+  updateCfgValue(g, i, val)
+  {
+    //! updateCfgValue - update value in cfg entries
+    if (!this.state.cfgEntries) return;
+    if (g === null || typeof g === 'undefined')
+    {
+      const it = this.state.cfgEntries[i]; if (it && it.type === 'entry') it.value = val; try { this.validateCfg(); } catch (e) { } return;
+    }
+    const grp = this.state.cfgEntries[g]; if (!grp || grp.type !== 'group') return; if (grp.entries && grp.entries[i]) grp.entries[i].value = val;
+    try { this.validateCfg(); } catch (e) { }
+  }
+
+  removeCfgLine(g, i)
+  {
+    //! removeCfgLine - remove a cfg entry
+    if (!this.state.cfgEntries) return;
+    if (g === null || typeof g === 'undefined') { this.state.cfgEntries.splice(i, 1); try { renderCfg(this); } catch (e) { } return; }
+    const grp = this.state.cfgEntries[g]; if (!grp || grp.type !== 'group') return; grp.entries.splice(i, 1); try { renderCfg(this); } catch (e) { }
+    try { this.validateCfg(); } catch (e) { }
+  }
+
+  removeCfgGroup(g)
+  {
+    //! removeCfgGroup - remove a cfg group
+    if (!this.state.cfgEntries) return; this.state.cfgEntries.splice(g, 1); try { renderCfg(this); } catch (e) { }
+    try { this.validateCfg(); } catch (e) { }
+  }
+
   async validateAll()
   {
+    //! validateAll - validate all steam ids via batch API
     const ids = [];
     this.state.groups.forEach(g => g.entries.forEach(e => { if (e.id && /^\d{17}$/.test(e.id)) ids.push(e.id); }));
     if (!ids.length) return;
     this.state.groups.forEach(g => g.entries.forEach(e => { if (e.id && /^\d{17}$/.test(e.id)) e.loading = true; }));
     renderGroups(this);
+    try
+    {
+      const anyInvalid = (this.state.groups || []).some(g => (g.entries || []).some(e => e.valid === false));
+      this.state.hasValidationErrors = !!anyInvalid;
+      try { const step3btn = document.getElementById('step3btn'); if (step3btn) step3btn.disabled = !!this.state.hasValidationErrors; } catch (e) { }
+    } catch (e) { }
     const results = await validateBatch(ids);
     const map = {};
     (results || []).forEach(it => map[it.id] = it);
@@ -178,63 +288,137 @@ export default class PrivilegesEditor
       }
     }));
     renderGroups(this);
+    try
+    {
+      const anyInvalidAfter = (this.state.groups || []).some(g => (g.entries || []).some(e => e.valid === false));
+      this.state.hasValidationErrors = !!anyInvalidAfter;
+      try { const step3btn = document.getElementById('step3btn'); if (step3btn) step3btn.disabled = !!this.state.hasValidationErrors; } catch (e) { }
+    } catch (e) { }
   }
 
-  //! Validate single steamid via backend
-  //! \param id - 17-digit steamid
+  //! validateSingle - wrapper to api validateSingle
+  //! \param id - steamid64 string
   async validateSingle(id)
   {
     return await apiValidateSingle(id);
   }
 
-  //! Resolve a Steam profile URL or vanity to steamid64 via backend
-  //! \param profileUrl - URL or vanity string
+  //! resolveSteamProfile - wrapper to api resolveSteamProfile
+  //! \param profileUrl - profile url or identifier
   async resolveSteamProfile(profileUrl)
   {
     return await apiResolveSteamProfile(profileUrl);
   }
 
-  //! Build XML from current state
-  //! \returns XML string
+  //! buildXml - build privileges XML via xmlbuilder
   buildXml()
   {
     return xmlBuild(this.state);
   }
 
-  //! Do FTP upload (POST to backend)
-  //! \param options - { host, port, user, pass, xml }
+  //! buildCfg - build dedicated.cfg text via parser
+  buildCfg()
+  {
+    return parserBuildCfg(this.state.cfgEntries || []);
+  }
+
+  //! validateCfg - validate cfg entries for duplicates
+  validateCfg()
+  {
+    try
+    {
+      const items = this.state.cfgEntries || [];
+      const map = {};
+      const refs = [];
+      items.forEach((it, idx) =>
+      {
+        if (it.type === 'entry')
+        {
+          const k = (it.key || '').trim();
+          refs.push({ key: k, obj: it });
+        }
+        else if (it.type === 'group')
+        {
+          (it.entries || []).forEach(e => { refs.push({ key: (e.key || '').trim(), obj: e }); });
+        }
+      });
+      refs.forEach(r => { const k = r.key || ''; if (!k) return; map[k] = map[k] || []; map[k].push(r.obj); });
+      let hasDup = false;
+      Object.keys(map).forEach(k =>
+      {
+        const arr = map[k] || [];
+        if (arr.length > 1)
+        {
+          hasDup = true;
+          arr.forEach(o => o.duplicate = true);
+        }
+        else if (arr.length === 1)
+        {
+          arr[0].duplicate = false;
+        }
+      });
+      refs.forEach(r => { if (!r.key) r.obj.duplicate = false; });
+      try { import('./modules/render.js').then(m => { if (m && m.renderCfg) m.renderCfg(this); }).catch(() => { }); } catch (e) { }
+      try { this.state.cfgHasDuplicates = !!hasDup; } catch (e) { }
+      try { const step3btn = document.getElementById('step3btn'); if (step3btn) step3btn.disabled = !!this.state.cfgHasDuplicates; } catch (e) { }
+      try { if (typeof this.updateValidationBadge === 'function') this.updateValidationBadge(); } catch (e) { }
+      if (hasDup)
+      {
+        try
+        {
+          // build a short list of duplicate keys for the toast
+          const dupKeys = Object.keys(map).filter(k => (map[k] || []).length > 1);
+          const maxShow = 6;
+          const shown = dupKeys.slice(0, maxShow).join(', ');
+          const more = dupKeys.length > maxShow ? ` (+${dupKeys.length - maxShow} more)` : '';
+          const msg = `Duplicate cfg keys detected: ${shown}${more}. Remove duplicates before exporting.`;
+          this.showToast(msg, [{
+            label: 'Focus first duplicate', style: 'btn btn-sm btn-outline-secondary', onClick: () =>
+            {
+              try
+              {
+                const el = document.querySelector('.cfg-line .is-invalid');
+                if (el && typeof el.focus === 'function') el.focus();
+              } catch (e) { }
+            }
+          }, { label: 'Dismiss', style: 'btn btn-sm btn-outline-secondary', onClick: () => { } }], { type: 'error' });
+        } catch (e) { try { this.showToast('Duplicate cfg keys detected — remove duplicates before exporting', null, { type: 'error' }); } catch (ee) { } }
+      }
+      return !hasDup;
+    } catch (e) { return true; }
+  }
+
+  //! doFtpUpload - wrapper to api.doFtpUpload for class
+  //! \param {host,port,user,pass,xml} - ftp options
   async doFtpUpload({ host, port, user, pass, xml })
   {
     const resDiv = document.getElementById('ftpResult'); if (resDiv) resDiv.innerText = 'Uploading...';
     try
     {
-      const r = await apiDoFtpUpload({ host, port, user, pass, xml });
+      const remotePathEl = document.getElementById('ftpModalRemotePath');
+      const remotePath = remotePathEl ? remotePathEl.value.trim() : '/Assets/privileges.xml';
+      const r = await apiDoFtpUpload({ host, port, user, pass, xml, remotePath });
       const j = r.json || {};
       if (r.ok) { if (resDiv) resDiv.innerText = 'Uploaded: ' + (j.uploadedTo || 'ok'); showToast('Upload successful', null, { type: 'success' }); }
       else { if (resDiv) resDiv.innerText = 'Error: ' + (j.error || JSON.stringify(j)); showToast('Upload error: ' + (j.error || JSON.stringify(j))); }
     } catch (e) { if (resDiv) resDiv.innerText = 'Error: ' + e.message; showToast('Upload error: ' + e.message); }
   }
 
-  //! Show toast notification
-  //! \param message - message text
-  //! \param actions - optional actions array
-  //! \param opts - optional options
   showToast(message, actions, opts)
   {
+    //! showToast - forward to helpers.showToast
     return showToast(message, actions, opts);
   }
 
-  //! Show modal prompting to open steam profile
-  //! \param steamid - steamid string
   showProfileModal(steamid)
   {
+    //! showProfileModal - forward to helpers.showProfileModal
     return showProfileModal(steamid);
   }
 
-  //! Wire DOM event listeners and expose any needed globals
-  //! \no params
   init()
   {
+    //! init - attach global and perform initialization
     window.privApp = this;
   }
 }

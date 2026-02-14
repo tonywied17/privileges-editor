@@ -2,9 +2,10 @@
 //! \param s - input string
 function escapeXmlAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
 
-//! Build privileges XML from application state
-//! \param state - app state object containing `groups`
 export function buildXml(state)
+
+//! buildXml - construct privileges XML from state
+//! \param state - application state containing groups
 {
     let out = '<Privileges>\n    <Privilege Name="Administrator">\n        <SteamIDs>\n';
     (state.groups || []).forEach(g =>

@@ -1,6 +1,6 @@
 
-//! Validate a single SteamID via server
-//! \param id - Steam ID string
+//! validateSingle - validate a single steam id via API
+//! \param id - steamid64 string
 export async function validateSingle(id)
 {
     try
@@ -12,8 +12,8 @@ export async function validateSingle(id)
     } catch (e) { return null; }
 }
 
-//! Validate an array of SteamIDs via server
-//! \param ids - array of Steam ID strings
+//! validateBatch - validate multiple steam ids via API
+//! \param ids - array of steamid64 strings
 export async function validateBatch(ids)
 {
     try
@@ -25,8 +25,8 @@ export async function validateBatch(ids)
     } catch (e) { return null; }
 }
 
-//! Resolve a Steam profile URL to a SteamID via server
-//! \param profileUrl - Steam profile URL
+//! resolveSteamProfile - resolve a steam profile URL to steamid
+//! \param profileUrl - URL or identifier to resolve
 export async function resolveSteamProfile(profileUrl)
 {
     try
@@ -39,28 +39,33 @@ export async function resolveSteamProfile(profileUrl)
     } catch (e) { return null; }
 }
 
-//! Upload XML to FTP via server endpoint
-//! \param { host, port, user, pass, xml } - connection info and XML payload
-export async function doFtpUpload({ host, port, user, pass, xml })
+//! doFtpUpload - upload xml to FTP via server proxy
+//! \param {host,port,user,pass,xml,remotePath} - ftp options
+export async function doFtpUpload({ host, port, user, pass, xml, remotePath })
 {
-    const r = await fetch('/upload-ftp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ host, port, username: user, password: pass, xml, remotePath: '/Assets/privileges.xml' }) });
+    const body = { host, username: user, password: pass, xml };
+    if (port) body.port = port;
+    body.remotePath = remotePath || '/Assets/privileges.xml';
+    const r = await fetch('/upload-ftp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({}));
     return { ok: r.ok, json: j };
 }
 
-//! Test FTP connection using check-ftp endpoint
-//! \param { host, port, user, pass } - connection info
-export async function testFtpConnection({ host, port, user, pass })
+//! testFtpConnection - test connectivity to FTP host
+//! \param {host,port,user,pass,remotePath} - ftp options
+export async function testFtpConnection({ host, port, user, pass, remotePath })
 {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try
     {
+        const body = { host, port: port || 21, username: user, password: pass };
+        body.remotePath = remotePath || '/Assets/privileges.xml';
         const r = await fetch('/check-ftp', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ host, port: port || 21, username: user, password: pass, remotePath: '/Assets/privileges.xml' }),
+            body: JSON.stringify(body),
             signal: controller.signal
         });
         clearTimeout(timeoutId);

@@ -3,10 +3,10 @@
 //! \param s - input string
 function escapeHtml(s) { return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
-//! Show a toast message in the UI
-//! \param message - text to show
+//! showToast - show a toast notification
+//! \param message - text message to display
 //! \param actions - optional action buttons array
-//! \param opts - optional options (e.g., { type: 'success' })
+//! \param opts - options (type etc)
 export function showToast(message, actions, opts)
 {
     const c = document.getElementById('toastContainer'); if (!c) return;
@@ -22,8 +22,25 @@ export function showToast(message, actions, opts)
     c.appendChild(card);
 }
 
-//! Show a modal prompting to open a Steam profile
-//! \param steamid - SteamID string
+//! showConfirm - show a confirm-style toast and return promise
+//! \param message - confirmation message
+//! \param opts - options
+export function showConfirm(message, opts)
+{
+    return new Promise((resolve) =>
+    {
+        try
+        {
+            showToast(message, [
+                { label: 'Yes', style: 'btn btn-sm btn-primary', onClick: () => { resolve(true); } },
+                { label: 'No', style: 'btn btn-sm btn-outline-secondary', onClick: () => { resolve(false); } }
+            ], Object.assign({ type: 'warning' }, opts || {}));
+        } catch (e) { resolve(false); }
+    });
+}
+
+//! showProfileModal - display a simple modal to open given steam profile
+//! \param steamid - steamid64 string
 export function showProfileModal(steamid)
 {
     let modal = document.getElementById('steamProfileModal');

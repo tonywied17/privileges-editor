@@ -12,12 +12,7 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-//! Privileges editor backend server
-//! - Serves static UI and provides helper endpoints for Steam lookups and FTP operations
 
-//! Validate SteamIDs by fetching public Steam profile XML
-//! \param req.body.steamids - array of SteamID strings
-//! Returns JSON: { results: [ { id, valid, avatar, name } ] }
 app.post('/validate', async (req, res) =>
 {
   const steamids = Array.isArray(req.body.steamids) ? req.body.steamids : [];
@@ -42,9 +37,6 @@ app.post('/validate', async (req, res) =>
   res.json({ results });
 });
 
-//! Upload privileges.xml to remote FTP server (GPortal)
-//! \param req.body - { host, port, username, password, xml, remotePath }
-//! Returns JSON: { ok: true, uploadedTo }
 app.post('/upload-ftp', async (req, res) =>
 {
   const { host, port, username, password, xml, remotePath } = req.body;
@@ -75,9 +67,6 @@ app.post('/upload-ftp', async (req, res) =>
   }
 });
 
-//! Download a remote file from FTP and return its contents
-//! \param req.body - { host, port, username, password, remotePath }
-//! Returns JSON: { ok: true, xml }
 app.post('/download-ftp', async (req, res) =>
 {
   const { host, port, username, password, remotePath } = req.body;
@@ -111,9 +100,6 @@ app.post('/download-ftp', async (req, res) =>
   }
 });
 
-//! Check whether a file exists on the FTP server
-//! \param req.body - { host, port, username, password, remotePath }
-//! Returns JSON: { exists: boolean, size?: number }
 app.post('/check-ftp', async (req, res) =>
 {
   const { host, port, username, password, remotePath } = req.body;
@@ -124,7 +110,6 @@ app.post('/check-ftp', async (req, res) =>
     logger: (msg, ...args) => console.log(`[FTP Check ${host}]`, msg, ...args)
   });
 
-  // Handle unhandled errors to prevent server restarts
   client.on('error', (err) =>
   {
     console.error(`[FTP Check ${host}] Client error:`, err.message);
@@ -145,9 +130,6 @@ app.post('/check-ftp', async (req, res) =>
   }
 });
 
-//! Resolve a Steam profile URL (vanity or numeric) to a 17-digit SteamID64
-//! \query profileUrl - Steam profile URL or vanity path
-//! Returns JSON: { steamid64, avatar, name }
 app.get('/resolve-steam', async (req, res) =>
 {
   const profileUrl = req.query.profileUrl;
@@ -177,7 +159,6 @@ app.get('/resolve-steam', async (req, res) =>
       resolvedSteamId64 = steamIdNumeric;
     }
 
-    // public profile XML to retrieve avatar
     const profileXmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(resolvedSteamId64)}/?xml=1`;
     const pr = await fetch(profileXmlUrl, { timeout: 8000 });
     if (!pr.ok) return res.status(500).json({ error: 'Failed to fetch Steam profile' });
@@ -196,5 +177,4 @@ app.get('/resolve-steam', async (req, res) =>
 });
 
 const PORT = process.menv.PORT || 7272;
-//! Start HTTP server on configured port
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
